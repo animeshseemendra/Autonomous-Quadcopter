@@ -28,7 +28,6 @@ class Task():
 
     def get_reward(self):
         """Uses current pose of sim to return reward."""
-        #reward = (1+0.0004*min(self.sim.v[2],50)-.0005*(abs(self.sim.pose[:3] - self.target_pos)).sum())
         reward = np.tanh(1 - 0.0003*(abs(self.sim.pose[:3] - self.target_pos)).sum())
         return reward
 
