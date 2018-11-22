@@ -1,64 +1,11 @@
+# TODO: your agent here!
+from agents.Actor import Actor
+from agents.Critic import Critic
+from agents.Noise import OUNoise
+from agents.ReplayBuffer import ReplayBuffer
 import numpy as np
-from task import Task 
-from agents.model import takeoff
-from keras import layers, models, optimizers, regularizers
-from keras import backend as bK
-import random
-from collections import namedtuple, deque
-import copy
-class ReplayBuffer:
-    def __init__(self, buffer_size, batch_size):
-        self.memory = deque(maxlen=buffer_size)  # internal memory (deque)
-        self.batch_size = batch_size
-        self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
-
-    def add(self, state, action, reward, next_state, done):
-        e = self.experience(state, action, reward, next_state, done)
-        self.memory.append(e)
-
-    def sample(self, batch_size=64):
-        
-        return random.sample(self.memory, k=self.batch_size)
-
-    def __len__(self):
-        return len(self.memory)
-class Actor:
-    
-
-    def __init__(self, state_size, action_size, action_low, action_high):
-       
-        self.state_size = state_size
-        self.action_size = action_size
-        self.action_low = action_low
-        self.action_high = action_high
-        self.action_range = self.action_high - self.action_low
-        self.build_model()
-    def build_model(self):
-        obj=takeoff(self.state_size, self.action_size, self.action_low, self.action_high)
-        self.model,actions=obj.build_model_actor()
-        action_gradients = layers.Input(shape=(self.action_size,))
-        loss = bK.mean(-action_gradients * actions)
-        optimizer = optimizers.Adam()
-        updates_op = optimizer.get_updates(params=self.model.trainable_weights, loss=loss)
-        self.train_fn = bK.function(inputs=[self.model.input, action_gradients, bK.learning_phase()],outputs=[],updates=updates_op)
-class Critic:
-    def __init__(self,state_size, action_size, action_low, action_high):
-        self.state_size = state_size
-        self.action_size = action_size
-        self.action_low = action_low
-        self.action_high = action_high
-        self.action_range = self.action_high - self.action_low
-        self.build_model()
-    def build_model(self):
-        obj=takeoff(self.state_size, self.action_size, self.action_low, self.action_high)
-        self.model,actions,Q_values=obj.build_model_critic()
-        optimizer = optimizers.Adam()
-        self.model.compile(optimizer=optimizer, loss='mse')
-        action_gradients = bK.gradients(Q_values, actions)
-        self.get_action_gradients = bK.function(inputs=[*self.model.input, bK.learning_phase()],outputs=action_gradients)
-        
-        
 class DDPG():
+    """Reinforcement Learning agent that learns using DDPG."""
     def __init__(self, task):
         self.task = task
         self.state_size = task.state_size
@@ -71,8 +18,8 @@ class DDPG():
         self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high)
 
         # Critic (Value) Model
-        self.critic_local = Critic(self.state_size, self.action_size, self.action_low, self.action_high)
-        self.critic_target = Critic(self.state_size, self.action_size, self.action_low, self.action_high)
+        self.critic_local = Critic(self.state_size, self.action_size)
+        self.critic_target = Critic(self.state_size, self.action_size)
 
         # Initialize target model parameters with local model parameters
         self.critic_target.model.set_weights(self.critic_local.model.get_weights())
@@ -81,7 +28,7 @@ class DDPG():
         # Noise process
         self.exploration_mu = 0
         self.exploration_theta = 0.15
-        self.exploration_sigma = 0.2
+        self.exploration_sigma = 0.25
         self.noise = OUNoise(self.action_size, self.exploration_mu, self.exploration_theta, self.exploration_sigma)
 
         # Replay memory
@@ -90,8 +37,8 @@ class DDPG():
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
 
         # Algorithm parameters
-        self.gamma = 0.85 # discount factor
-        self.tau = 0.02  # for soft update of target parameters
+        self.gamma = 0.99  # discount factor
+        self.tau = 0.001  # for soft update of target parameters
 
     def reset_episode(self):
         self.noise.reset()
@@ -152,28 +99,3 @@ class DDPG():
 
         new_weights = self.tau * local_weights + (1 - self.tau) * target_weights
         target_model.set_weights(new_weights)
-        
-class OUNoise:
-    """Ornstein-Uhlenbeck process."""
-
-    def __init__(self, size, mu, theta, sigma):
-        """Initialize parameters and noise process."""
-        self.mu = mu * np.ones(size)
-        self.theta = theta
-        self.sigma = sigma
-        self.reset()
-
-    def reset(self):
-        """Reset the internal state (= noise) to mean (mu)."""
-        self.state = copy.copy(self.mu)
-
-    def sample(self):
-        """Update internal state and return it as a noise sample."""
-        x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(len(x))
-        self.state = x + dx
-        return self.state
-        
-        
-        
-
