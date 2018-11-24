@@ -23,11 +23,11 @@ class Critic:
         # Define input layers
         states = layers.Input(shape=(self.state_size,), name='states')
         actions = layers.Input(shape=(self.action_size,), name='actions')
-        net_states = layers.Dense(units=512, kernel_regularizer=regularizers.l2(0.001))(states)
+        net_states = layers.Dense(units=512, kernel_regularizer=regularizers.l2(0.01))(states)
         net_states = layers.BatchNormalization()(net_states)
         net_states = layers.Activation('relu')(net_states)
-        net_states = layers.Dense(units=256, activation='relu', kernel_regularizer=regularizers.l2(0.001))(net_states)
-        net_actions = layers.Dense(units=256, activation='relu', kernel_regularizer=regularizers.l2(0.001))(actions)
+        net_states = layers.Dense(units=256, activation='relu', kernel_regularizer=regularizers.l2(0.01))(net_states)
+        net_actions = layers.Dense(units=256, activation='relu', kernel_regularizer=regularizers.l2(0.01))(actions)
 
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
 
@@ -45,7 +45,7 @@ class Critic:
         self.model = models.Model(inputs=[states, actions], outputs=Q_values)
 
         # Define optimizer and compile model for training with built-in loss function
-        optimizer = optimizers.Adam(lr=0.001)
+        optimizer = optimizers.Adam()
         self.model.compile(optimizer=optimizer, loss='mse')
 
         # Compute action gradients (derivative of Q values w.r.t. to actions)
