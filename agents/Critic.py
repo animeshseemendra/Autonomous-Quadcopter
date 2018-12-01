@@ -1,11 +1,11 @@
+from keras import layers, models, optimizers, regularizers
 from keras import backend as K
-from keras import layers ,models , optimizers ,regularizers
+
 class Critic:
     """Critic (Value) Model."""
 
     def __init__(self, state_size, action_size):
         """Initialize parameters and build model.
-
         Params
         ======
             state_size (int): Dimension of each state
@@ -23,12 +23,14 @@ class Critic:
         # Define input layers
         states = layers.Input(shape=(self.state_size,), name='states')
         actions = layers.Input(shape=(self.action_size,), name='actions')
-        net_states = layers.Dense(units=512, kernel_regularizer=regularizers.l2(0.01))(states)
+        net_states = layers.Dense(units=500, kernel_regularizer=regularizers.l2(0.01))(states)
         net_states = layers.BatchNormalization()(net_states)
         net_states = layers.Activation('relu')(net_states)
-        net_states = layers.Dense(units=256, activation='relu', kernel_regularizer=regularizers.l2(0.01))(net_states)
-        net_actions = layers.Dense(units=256, activation='relu', kernel_regularizer=regularizers.l2(0.01))(actions)
-
+        net_states = layers.Dense(units=250, kernel_regularizer=regularizers.l2(0.01))(net_states)
+        net_states = layers.Activation('relu')(net_states)
+        # Add hidden layer(s) for action pathway
+        net_actions = layers.Dense(units=250, kernel_regularizer=regularizers.l2(0.01))(actions)
+        net_actions = layers.Activation('relu')(actions)
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
 
         # Combine state and action pathways
@@ -37,7 +39,7 @@ class Critic:
 
         # Add more layers to the combined network if needed
 
-        # Add final output layer to prduce action values (Q values)
+        # Add final output layer to produce action values (Q values)
         Q_values = layers.Dense(units=1, name='q_values',
                                 kernel_initializer=layers.initializers.RandomUniform(minval=-3e-3,maxval=3e-3))(net)
 
@@ -45,7 +47,7 @@ class Critic:
         self.model = models.Model(inputs=[states, actions], outputs=Q_values)
 
         # Define optimizer and compile model for training with built-in loss function
-        optimizer = optimizers.Adam()
+        optimizer = optimizers.Adam(lr=0.001)
         self.model.compile(optimizer=optimizer, loss='mse')
 
         # Compute action gradients (derivative of Q values w.r.t. to actions)
